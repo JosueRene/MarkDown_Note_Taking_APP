@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Note-taking App</title>
+</head>
+<body>
+    <h1> Markdown Note-taking App </h1>
+
+    <!-- Upload Form -->
+    <h2> Upload Markdown File </h2>
+    <form action="http://localhost:3000/notes/upload" method="POST" enctype="multipart/form-data">
+        <input type="file" name="file" accept=".md, .markdown" required />
+        <button type="submit"> Upload </button>
+    </form>
+
+    <!-- Check Grammar -->
+    <h2> Check Grammar </h2>
+    <textarea id="grammarInput" rows="10" cols="50" placeholder="Paste Markdown text here..."></textarea>
+    <button id="checkGrammarButton">Check Grammar</button>
+    <div id="grammarResults"></div>
+
+    <!-- List Notes -->
+    <h2>Saved Notes</h2>
+    <ul id="noteList"></ul>
+
+    <script>
+
+        // Fetch and display notes
+        async function fetchNotes(){
+
+            const response = await fetch('http://localhost:3000/notes/')
+            const notes = await response.json()
+            const noteList = document.getElementById('noteList');
+            noteList.innerHTML = '';
+
+            notes.forEach(note => {
+                const li = document.createElement('li') // Create an <li> element
+                const anchorTag = document.createElement('a') // Create an <a> (anchor) element
+                
+                anchorTag.href = `http://localhost:3000/notes/${note._id}` // Set the anchor tag's link or href to the URL of the note
+                anchorTag.target = '_blank' // Open the link in a new tab
+                anchorTag.textContent= `${note.title} (${new Date(note.createdAt).toLocaleString()})`; // Set the link text to the note title and formatted creation date
+                
+                li.appendChild(anchorTag) // Append the <a> tag to the <li> tag
+                noteList.appendChild(li) // Append the <li> tag to the <ul> or <ol> list
+            })
+        }
+
+        fetchNotes();
+
+        // Check Grammar
+        const checkGrammarButton = document.getElementById('checkGrammarButton')
+
+        checkGrammarButton.addEventListener('click', async() => {
+            const textToCheck = document.getElementById('grammarInput').value;
+
+            if(!textToCheck.trim()) {
+                alert('Please enter some text for grammar checking!')
+                return;
+            }
+
+            try {
+                
+            const response = await fetch('http://localhost:3000/notes/check-grammar', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ text: textToCheck }), 
+                /* Key Use Cases for JSON.stringify()
+                   Sending form data or user input to a backend API.
+                   Submitting JSON payloads to APIs for processing.
+                   Communicating with RESTful APIs that require structured data in the body.
+                */
+            })
+
+            // xxx.json() is used to change data from JSON format into a javascript friendly format like object
+            const result = await response.json()
+            console.log(result)
+
+            const resultsDiv = document.getElementById('grammarResults')
+            resultsDiv.innerHTML = ''
+
+            if(result.issues && result.issues.length > 0) {
+                result.issues.forEach(issue => {
+                    const issueDiv = document.createElement('div')
+                    issueDiv.innerHTML = `
+                        <p> <strong> Issue: </strong> ${issue.message} </p>
+                        <p> <strong> Suggestions: </strong> ${issue.suggestions.join(', ')} </p>
+                         <p><strong>Context:</strong> ${issue.context}</p>
+                    `
+
+                    resultsDiv.appendChild(issueDiv)
+                })
+            } else {
+                resultsDiv.innerHTML = '<p> No grammar issues found! <p>';
+            }
+        } catch (error) {
+            console.error('Error during grammar check:', error);
+            }
+        })
+        
+            
+
+
+    </script>
+
+</body>
+</html>
